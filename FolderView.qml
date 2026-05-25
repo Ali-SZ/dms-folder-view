@@ -649,18 +649,6 @@ DesktopPluginComponent {
                 height: parent.height - (root.showHeader ? headerContainer.height + parent.spacing : 0)
                 clip: true
 
-                MouseArea {
-                    anchors.fill: parent
-                    acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-                    onClicked: mouse => {
-                        if (mouse.button === Qt.LeftButton) {
-                            root.clearSelection();
-                        } else if (mouse.button === Qt.MiddleButton) {
-                            root.pasteFromClipboard();
-                        }
-                    }
-                }
-
                 FolderListModel {
                     id: folderModel
                     folder: root.targetFolderUrl
@@ -669,7 +657,6 @@ DesktopPluginComponent {
                     sortField: root.folderSortField
                 }
 
-                // Grid View of icons
                 GridView {
                     id: fileGrid
                     anchors.fill: parent
@@ -678,6 +665,20 @@ DesktopPluginComponent {
                     model: filteredModel
                     visible: root.viewMode === "grid"
                     boundsBehavior: Flickable.StopAtBounds
+
+                    MouseArea {
+                        id: fileGridBackground
+                        width: Math.max(fileGrid.width, fileGrid.contentWidth)
+                        height: Math.max(fileGrid.height, fileGrid.contentHeight)
+                        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+                        onClicked: mouse => {
+                            if (mouse.button === Qt.LeftButton) {
+                                root.clearSelection();
+                            } else if (mouse.button === Qt.MiddleButton) {
+                                root.pasteFromClipboard();
+                            }
+                        }
+                    }
 
                     // Smooth add/remove transitions
                     add: Transition {
@@ -822,6 +823,20 @@ DesktopPluginComponent {
                     spacing: 2
                     clip: true
 
+                    MouseArea {
+                        id: fileListBackground
+                        width: Math.max(fileList.width, fileList.contentWidth)
+                        height: Math.max(fileList.height, fileList.contentHeight)
+                        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+                        onClicked: mouse => {
+                            if (mouse.button === Qt.LeftButton) {
+                                root.clearSelection();
+                            } else if (mouse.button === Qt.MiddleButton) {
+                                root.pasteFromClipboard();
+                            }
+                        }
+                    }
+
                     // Smooth add/remove transitions
                     add: Transition {
                         NumberAnimation { property: "opacity"; from: 0; to: 1.0; duration: 200 }
@@ -945,6 +960,20 @@ DesktopPluginComponent {
                     visible: root.viewMode === "compact"
                     boundsBehavior: Flickable.StopAtBounds
                     clip: true
+
+                    MouseArea {
+                        id: fileCompactBackground
+                        width: Math.max(fileCompact.width, fileCompact.contentWidth)
+                        height: Math.max(fileCompact.height, fileCompact.contentHeight)
+                        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+                        onClicked: mouse => {
+                            if (mouse.button === Qt.LeftButton) {
+                                root.clearSelection();
+                            } else if (mouse.button === Qt.MiddleButton) {
+                                root.pasteFromClipboard();
+                            }
+                        }
+                    }
 
                     // Smooth add/remove transitions
                     add: Transition {
