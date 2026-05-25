@@ -120,6 +120,45 @@ DesktopPluginComponent {
         }
     }
 
+    ListModel {
+        id: filteredModel
+    }
+
+    function updateFilteredModel() {
+        filteredModel.clear();
+        if (folderModel.status !== FolderListModel.Ready) return;
+        
+        const pattern = root.searchPattern.toLowerCase();
+        for (let i = 0; i < folderModel.count; i++) {
+            const fName = folderModel.get(i, "fileName");
+            const fPath = folderModel.get(i, "filePath");
+            const fIsDir = folderModel.get(i, "fileIsDir");
+            
+            if (pattern === "" || fName.toLowerCase().indexOf(pattern) !== -1) {
+                filteredModel.append({
+                    filePath: fPath,
+                    fileName: fName,
+                    fileIsDir: fIsDir,
+                    index: i
+                });
+            }
+        }
+    }
+
+    onSearchPatternChanged: updateFilteredModel()
+
+    Connections {
+        target: folderModel
+        function onStatusChanged() {
+            if (folderModel.status === FolderListModel.Ready) {
+                updateFilteredModel();
+            }
+        }
+        function onCountChanged() {
+            updateFilteredModel();
+        }
+    }
+
     function getIconName(fileName, isDir) {
         if (isDir) return "folder";
         
@@ -477,7 +516,6 @@ DesktopPluginComponent {
                     showDirsFirst: true
                     showHidden: root.showHidden
                     sortField: root.folderSortField
-                    nameFilters: root.searchPattern !== "" ? ["*" + root.searchPattern + "*"] : []
                 }
 
                 // Grid View of icons
@@ -486,7 +524,7 @@ DesktopPluginComponent {
                     anchors.fill: parent
                     cellWidth: root.cellSize
                     cellHeight: root.cellSize + 16
-                    model: folderModel
+                    model: filteredModel
                     visible: root.viewMode === "grid"
                     boundsBehavior: Flickable.StopAtBounds
 
@@ -617,7 +655,7 @@ DesktopPluginComponent {
                 ListView {
                     id: fileList
                     anchors.fill: parent
-                    model: folderModel
+                    model: filteredModel
                     visible: root.viewMode === "list"
                     boundsBehavior: Flickable.StopAtBounds
                     spacing: 2
@@ -732,7 +770,7 @@ DesktopPluginComponent {
                     anchors.fill: parent
                     cellWidth: parent.width > 280 ? parent.width / 2 : parent.width
                     cellHeight: 30
-                    model: folderModel
+                    model: filteredModel
                     visible: root.viewMode === "compact"
                     boundsBehavior: Flickable.StopAtBounds
                     clip: true
@@ -840,15 +878,15 @@ DesktopPluginComponent {
                     }
                 }
 
-                // Placeholder when Desktop is empty
+                // Placeholder when folder is empty or search returns no results
                 Column {
                     anchors.centerIn: parent
                     spacing: Theme.spacingM
-                    visible: folderModel.count === 0 && folderModel.status === FolderListModel.Ready
+                    visible: filteredModel.count === 0 && folderModel.status === FolderListModel.Ready
                     width: parent.width * 0.8
 
                     DankIcon {
-                        name: "folder_open"
+                        name: folderModel.count === 0 ? "folder_open" : "search_off"
                         size: 48
                         color: Theme.surfaceText
                         opacity: 0.25
@@ -856,7 +894,9 @@ DesktopPluginComponent {
                     }
 
                     StyledText {
-                        text: root.folderDisplayName + " " + I18n.tr("is empty")
+                        text: folderModel.count === 0 
+                            ? root.folderDisplayName + " " + I18n.tr("is empty") 
+                            : I18n.tr("No search results found")
                         font.pixelSize: Theme.fontSizeSmall
                         color: Theme.surfaceText
                         opacity: 0.4
