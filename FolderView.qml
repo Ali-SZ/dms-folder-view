@@ -253,7 +253,11 @@ DesktopPluginComponent {
                     width: folderRow.implicitWidth
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: folderDropdown.opened ? folderDropdown.close() : folderDropdown.open()
+                    onClicked: {
+                        if (Date.now() - folderDropdown.lastClosedTime > 150) {
+                            folderDropdown.open();
+                        }
+                    }
 
                     Row {
                         id: folderRow
@@ -303,7 +307,11 @@ DesktopPluginComponent {
                         height: 20
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: viewModeDropdown.opened ? viewModeDropdown.close() : viewModeDropdown.open()
+                        onClicked: {
+                            if (Date.now() - viewModeDropdown.lastClosedTime > 150) {
+                                viewModeDropdown.open();
+                            }
+                        }
 
                         DankIcon {
                             anchors.centerIn: parent
@@ -322,7 +330,11 @@ DesktopPluginComponent {
                         height: 20
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: sortByDropdown.opened ? sortByDropdown.close() : sortByDropdown.open()
+                        onClicked: {
+                            if (Date.now() - sortByDropdown.lastClosedTime > 150) {
+                                sortByDropdown.open();
+                            }
+                        }
 
                         DankIcon {
                             anchors.centerIn: parent
@@ -1063,6 +1075,9 @@ DesktopPluginComponent {
         x: 0
         y: folderSelectorBtn.height + 4
 
+        property double lastClosedTime: 0
+        onClosed: lastClosedTime = Date.now()
+
         background: Rectangle {
             color: "transparent"
         }
@@ -1156,6 +1171,9 @@ DesktopPluginComponent {
         x: viewModeBtn.width - viewModeDropdown.width
         y: viewModeBtn.height + 4
 
+        property double lastClosedTime: 0
+        onClosed: lastClosedTime = Date.now()
+
         background: Rectangle {
             color: "transparent"
         }
@@ -1241,6 +1259,9 @@ DesktopPluginComponent {
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         x: sortByBtn.width - sortByDropdown.width
         y: sortByBtn.height + 4
+
+        property double lastClosedTime: 0
+        onClosed: lastClosedTime = Date.now()
 
         background: Rectangle {
             color: "transparent"
