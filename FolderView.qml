@@ -668,6 +668,7 @@ DesktopPluginComponent {
 
                     MouseArea {
                         id: fileGridBackground
+                        z: -1
                         width: Math.max(fileGrid.width, fileGrid.contentWidth)
                         height: Math.max(fileGrid.height, fileGrid.contentHeight)
                         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
@@ -825,6 +826,7 @@ DesktopPluginComponent {
 
                     MouseArea {
                         id: fileListBackground
+                        z: -1
                         width: Math.max(fileList.width, fileList.contentWidth)
                         height: Math.max(fileList.height, fileList.contentHeight)
                         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
@@ -963,6 +965,7 @@ DesktopPluginComponent {
 
                     MouseArea {
                         id: fileCompactBackground
+                        z: -1
                         width: Math.max(fileCompact.width, fileCompact.contentWidth)
                         height: Math.max(fileCompact.height, fileCompact.contentHeight)
                         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
