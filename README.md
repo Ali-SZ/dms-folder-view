@@ -1,6 +1,6 @@
 # Folder View
 
-A highly customizable, elegant, and general-purpose folder viewer widget for DankMaterialShell. It displays, opens, and manages files and directories directly on your screen.
+A folder viewer widget for DankMaterialShell that displays and manages files and directories on your screen.
 
 <img src="screenshot.png" width="400" alt="Screenshot">
 
