@@ -77,6 +77,7 @@ PluginSettings {
             settingKey: "folderType"
             label: I18n.tr("Target Folder")
             options: [
+                { label: I18n.tr("Home"), value: "home" },
                 { label: I18n.tr("Desktop"), value: "desktop" },
                 { label: I18n.tr("Downloads"), value: "downloads" },
                 { label: I18n.tr("Music"), value: "music" },

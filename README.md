@@ -28,12 +28,17 @@ git clone https://github.com/hthienloc/dms-folder-view ~/.config/DankMaterialShe
 
 | Action | Result |
 |--------|--------|
-| Left Click Folder Title | Open folder selection dropdown |
-| Left Click View Mode Icon | Open view mode selection dropdown |
-| Left Click Sort Icon | Open sorting options dropdown |
-| Double Click File/Folder | Open using system default application |
+| Left Click Folder Title | Open folder selection dropdown (Desktop, Downloads, Music, Videos, Documents, Trash, Home, Custom...) |
+| Left Click View Mode Icon | Open view mode selection dropdown (Grid, List, Compact) |
+| Left Click Sort Icon | Open sorting options dropdown (Name, Date, Size, Type) |
+| Left Click `+` Icon | Open creation dropdown (New Folder, New Document) |
 | Left Click File/Folder | Select/Highlight item |
-| Middle Click File/Folder | Open quick action context menu (Open, Copy, Copy Path, Rename, Move to Trash) |
+| Ctrl + Left Click File/Folder | Toggle selection of item (multi-select) |
+| Shift + Left Click File/Folder | Select range of items between last selection and clicked item |
+| Left Click Empty Space | Clear all active file/folder selections |
+| Middle Click Empty Space | Paste copied files/folders or clipboard screenshot images into active directory |
+| Double Click File/Folder | Open using system default application |
+| Middle Click File/Folder | Open context menu (Open, Copy, Copy Path, Rename, Move to Trash) for selected items |
 
 ## Requirements
 
@@ -47,6 +52,6 @@ GPL-3.0
 ## Roadmap / TODO
 
 - [ ] **Drag & Drop support:** Drag files directly from the widget into external windows (or vice versa to copy into the folder).
-- [ ] **Multi-file operations:** Select multiple items using Ctrl/Shift and perform bulk copies, moves, or trashing.
-- [ ] **File Search:** Add a small integrated search field in the header to filter large directories instantly.
-- [ ] **Folder Creation:** Add a quick action button to create new folders or empty text documents directly within the widget.
+- [x] **Multi-file operations:** Select multiple items using Ctrl/Shift and perform bulk copies, moves, or trashing.
+- [x] **File Search:** Add a small integrated search field in the header to filter large directories instantly.
+- [x] **Folder & File Creation:** Add a quick action button to create new folders or empty text documents directly within the widget.

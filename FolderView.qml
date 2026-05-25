@@ -40,6 +40,9 @@ DesktopPluginComponent {
         let path = home + "/Desktop";
         
         switch (folderType) {
+            case "home":
+                path = home;
+                break;
             case "downloads":
                 path = home + "/Downloads";
                 break;
@@ -73,6 +76,7 @@ DesktopPluginComponent {
 
     readonly property string folderDisplayName: {
         switch (folderType) {
+            case "home": return I18n.tr("Home");
             case "desktop": return I18n.tr("Desktop");
             case "downloads": return I18n.tr("Downloads");
             case "music": return I18n.tr("Music");
@@ -100,11 +104,94 @@ DesktopPluginComponent {
     }
 
     // Selected file tracking
-    property string selectedFilePath: ""
+    property var selectedFilePaths: []
+    property string lastSelectedFilePath: ""
     property string searchPattern: ""
 
-    onSelectedFilePathChanged: {
-        if (selectedFilePath !== "") {
+    function clearSelection() {
+        selectedFilePaths = [];
+        lastSelectedFilePath = "";
+    }
+
+    function toggleSelection(filePath) {
+        let arr = [...selectedFilePaths];
+        let idx = arr.indexOf(filePath);
+        if (idx === -1) {
+            arr.push(filePath);
+        } else {
+            arr.splice(idx, 1);
+        }
+        selectedFilePaths = arr;
+        lastSelectedFilePath = filePath;
+        selectionClearTimer.restart();
+    }
+
+    function selectSingle(filePath) {
+        selectedFilePaths = [filePath];
+        lastSelectedFilePath = filePath;
+        selectionClearTimer.restart();
+    }
+
+    function selectRangeTo(currentIndex) {
+        if (lastSelectedFilePath === "") {
+            if (filteredModel.count > currentIndex) {
+                selectSingle(filteredModel.get(currentIndex).filePath);
+            }
+            return;
+        }
+
+        let lastIndex = -1;
+        for (let i = 0; i < filteredModel.count; i++) {
+            if (filteredModel.get(i).filePath === lastSelectedFilePath) {
+                lastIndex = i;
+                break;
+            }
+        }
+
+        if (lastIndex === -1) {
+            if (filteredModel.count > currentIndex) {
+                selectSingle(filteredModel.get(currentIndex).filePath);
+            }
+            return;
+        }
+
+        let start = Math.min(lastIndex, currentIndex);
+        let end = Math.max(lastIndex, currentIndex);
+        let newSelection = [...selectedFilePaths];
+
+        for (let i = start; i <= end; i++) {
+            let path = filteredModel.get(i).filePath;
+            if (newSelection.indexOf(path) === -1) {
+                newSelection.push(path);
+            }
+        }
+        selectedFilePaths = newSelection;
+        selectionClearTimer.restart();
+    }
+
+    function pasteFromClipboard() {
+        let scriptPath = String(Qt.resolvedUrl("paste.py"));
+        if (scriptPath.startsWith("file://")) {
+            scriptPath = scriptPath.substring(7);
+        }
+        if (scriptPath.startsWith("localhost/")) {
+            scriptPath = scriptPath.substring(9);
+        }
+        
+        let pathStr = String(root.targetFolderUrl);
+        if (pathStr.startsWith("file://")) {
+            pathStr = pathStr.substring(7);
+        }
+        if (pathStr.startsWith("localhost/")) {
+            pathStr = pathStr.substring(9);
+        }
+        
+        ToastService.showToast(I18n.tr("Pasting files..."), ToastService.levelInfo);
+        Quickshell.execDetached([scriptPath, pathStr]);
+    }
+
+    onSelectedFilePathsChanged: {
+        if (selectedFilePaths.length > 0) {
             selectionClearTimer.restart();
         } else {
             selectionClearTimer.stop();
@@ -117,7 +204,7 @@ DesktopPluginComponent {
         repeat: false
         onTriggered: {
             if (!renameDialog.opened && !quickMenu.opened) {
-                root.selectedFilePath = "";
+                clearSelection();
             } else {
                 selectionClearTimer.restart();
             }
@@ -471,6 +558,25 @@ DesktopPluginComponent {
                         }
                     }
 
+                    // Create Button (New Folder / New File)
+                    MouseArea {
+                        id: createBtn
+                        width: 20
+                        height: 20
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: createDropdown.open()
+
+                        DankIcon {
+                            anchors.centerIn: parent
+                            name: "add"
+                            size: 16
+                            color: createBtn.containsMouse ? Theme.primary : Theme.surfaceText
+                            opacity: createBtn.containsMouse ? 1.0 : 0.7
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                        }
+                    }
+
                     // View Mode Button
                     MouseArea {
                         id: viewModeBtn
@@ -523,6 +629,18 @@ DesktopPluginComponent {
                 height: parent.height - (root.showHeader ? headerContainer.height + parent.spacing : 0)
                 clip: true
 
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+                    onClicked: mouse => {
+                        if (mouse.button === Qt.LeftButton) {
+                            root.clearSelection();
+                        } else if (mouse.button === Qt.MiddleButton) {
+                            root.pasteFromClipboard();
+                        }
+                    }
+                }
+
                 FolderListModel {
                     id: folderModel
                     folder: root.targetFolderUrl
@@ -559,7 +677,7 @@ DesktopPluginComponent {
                         required property bool fileIsDir
                         required property int index
 
-                        readonly property bool isSelected: root.selectedFilePath === filePath
+                        readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
 
                         SequentialAnimation {
@@ -635,8 +753,18 @@ DesktopPluginComponent {
 
                                 onClicked: mouse => {
                                     if (mouse.button === Qt.LeftButton) {
-                                        root.selectedFilePath = delegateRoot.filePath;
+                                        if (mouse.modifiers & Qt.ControlModifier) {
+                                            root.toggleSelection(delegateRoot.filePath);
+                                        } else if (mouse.modifiers & Qt.ShiftModifier) {
+                                            root.selectRangeTo(delegateRoot.index);
+                                        } else {
+                                            root.selectSingle(delegateRoot.filePath);
+                                        }
                                     } else if (mouse.button === Qt.MiddleButton) {
+                                        if (root.selectedFilePaths.indexOf(delegateRoot.filePath) === -1) {
+                                            root.selectSingle(delegateRoot.filePath);
+                                        }
+
                                         quickMenu.currentPath = delegateRoot.filePath;
                                         quickMenu.currentName = delegateRoot.fileName;
                                         quickMenu.currentIsDir = delegateRoot.fileIsDir;
@@ -656,7 +784,7 @@ DesktopPluginComponent {
                                         launchTimer.restart();
                                         // Open file/folder using default system application
                                         Quickshell.execDetached(["xdg-open", delegateRoot.filePath]);
-                                        root.selectedFilePath = "";
+                                        root.clearSelection();
                                     }
                                 }
                             }
@@ -692,7 +820,7 @@ DesktopPluginComponent {
                         required property bool fileIsDir
                         required property int index
 
-                        readonly property bool isSelected: root.selectedFilePath === filePath
+                        readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
 
                         Timer {
@@ -750,8 +878,18 @@ DesktopPluginComponent {
 
                                 onClicked: mouse => {
                                     if (mouse.button === Qt.LeftButton) {
-                                        root.selectedFilePath = listDelegateRoot.filePath;
+                                        if (mouse.modifiers & Qt.ControlModifier) {
+                                            root.toggleSelection(listDelegateRoot.filePath);
+                                        } else if (mouse.modifiers & Qt.ShiftModifier) {
+                                            root.selectRangeTo(listDelegateRoot.index);
+                                        } else {
+                                            root.selectSingle(listDelegateRoot.filePath);
+                                        }
                                     } else if (mouse.button === Qt.MiddleButton) {
+                                        if (root.selectedFilePaths.indexOf(listDelegateRoot.filePath) === -1) {
+                                            root.selectSingle(listDelegateRoot.filePath);
+                                        }
+
                                         quickMenu.currentPath = listDelegateRoot.filePath;
                                         quickMenu.currentName = listDelegateRoot.fileName;
                                         quickMenu.currentIsDir = listDelegateRoot.fileIsDir;
@@ -769,7 +907,7 @@ DesktopPluginComponent {
                                         listDelegateRoot.isLaunching = true;
                                         Quickshell.execDetached(["xdg-open", listDelegateRoot.filePath]);
                                         listLaunchTimer.restart();
-                                        root.selectedFilePath = "";
+                                        root.clearSelection();
                                     }
                                 }
                             }
@@ -806,7 +944,7 @@ DesktopPluginComponent {
                         required property bool fileIsDir
                         required property int index
 
-                        readonly property bool isSelected: root.selectedFilePath === filePath
+                        readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
 
                         Timer {
@@ -864,8 +1002,18 @@ DesktopPluginComponent {
 
                                 onClicked: mouse => {
                                     if (mouse.button === Qt.LeftButton) {
-                                        root.selectedFilePath = compactDelegateRoot.filePath;
+                                        if (mouse.modifiers & Qt.ControlModifier) {
+                                            root.toggleSelection(compactDelegateRoot.filePath);
+                                        } else if (mouse.modifiers & Qt.ShiftModifier) {
+                                            root.selectRangeTo(compactDelegateRoot.index);
+                                        } else {
+                                            root.selectSingle(compactDelegateRoot.filePath);
+                                        }
                                     } else if (mouse.button === Qt.MiddleButton) {
+                                        if (root.selectedFilePaths.indexOf(compactDelegateRoot.filePath) === -1) {
+                                            root.selectSingle(compactDelegateRoot.filePath);
+                                        }
+
                                         quickMenu.currentPath = compactDelegateRoot.filePath;
                                         quickMenu.currentName = compactDelegateRoot.fileName;
                                         quickMenu.currentIsDir = compactDelegateRoot.fileIsDir;
@@ -883,7 +1031,7 @@ DesktopPluginComponent {
                                         compactDelegateRoot.isLaunching = true;
                                         Quickshell.execDetached(["xdg-open", compactDelegateRoot.filePath]);
                                         compactLaunchTimer.restart();
-                                        root.selectedFilePath = "";
+                                        root.clearSelection();
                                     }
                                 }
                             }
@@ -968,35 +1116,53 @@ DesktopPluginComponent {
                         {
                             text: I18n.tr("Open"),
                             icon: "open_in_new",
+                            visible: true,
                             action: function() {
                                 quickMenu.close();
-                                Quickshell.execDetached(["xdg-open", quickMenu.currentPath]);
-                                root.selectedFilePath = "";
+                                for (let path of root.selectedFilePaths) {
+                                    Quickshell.execDetached(["xdg-open", path]);
+                                }
+                                root.clearSelection();
                             }
                         },
                         {
                             text: I18n.tr("Copy"),
                             icon: "content_copy",
+                            visible: true,
                             action: function() {
                                 quickMenu.close();
-                                const uri = "file://" + quickMenu.currentPath;
-                                const cmd = "echo -ne \"copy\\n" + uri + "\" | wl-copy -t x-special/gnome-copied-files";
+                                let uris = [];
+                                for (let path of root.selectedFilePaths) {
+                                    uris.push("file://" + path);
+                                }
+                                const cmd = "echo -ne \"copy\\n" + uris.join("\\n") + "\" | wl-copy -t x-special/gnome-copied-files";
                                 Quickshell.execDetached(["bash", "-c", cmd]);
-                                ToastService.showToast(I18n.tr("File Copied") + ": " + quickMenu.currentName, ToastService.levelInfo);
+                                
+                                let label = root.selectedFilePaths.length > 1
+                                    ? I18n.tr("Copied %1 items").arg(root.selectedFilePaths.length)
+                                    : I18n.tr("File Copied") + ": " + quickMenu.currentName;
+                                ToastService.showToast(label, ToastService.levelInfo);
                             }
                         },
                         {
                             text: I18n.tr("Copy Path"),
                             icon: "content_copy",
+                            visible: true,
                             action: function() {
                                 quickMenu.close();
-                                Quickshell.execDetached(["dms", "cl", "copy", quickMenu.currentPath]);
-                                ToastService.showToast(I18n.tr("Copied to Clipboard") + ": " + quickMenu.currentName, ToastService.levelInfo);
+                                const joinedPaths = root.selectedFilePaths.join("\n");
+                                Quickshell.execDetached(["dms", "cl", "copy", joinedPaths]);
+                                
+                                let label = root.selectedFilePaths.length > 1
+                                    ? I18n.tr("Copied %1 paths").arg(root.selectedFilePaths.length)
+                                    : I18n.tr("Copied to Clipboard") + ": " + quickMenu.currentName;
+                                ToastService.showToast(label, ToastService.levelInfo);
                             }
                         },
                         {
                             text: I18n.tr("Rename"),
                             icon: "edit",
+                            visible: root.selectedFilePaths.length <= 1,
                             action: function() {
                                 quickMenu.close();
                                 renameDialog.showFor(quickMenu.currentPath, quickMenu.currentName, quickMenu.currentIsDir);
@@ -1006,16 +1172,20 @@ DesktopPluginComponent {
                             text: I18n.tr("Move to Trash"),
                             icon: "delete",
                             dangerous: true,
+                            visible: true,
                             action: function() {
                                 quickMenu.close();
-                                Quickshell.execDetached(["gio", "trash", quickMenu.currentPath]);
+                                Quickshell.execDetached(["gio", "trash"].concat(root.selectedFilePaths));
+                                root.clearSelection();
                             }
                         }
                     ]
 
                     delegate: Rectangle {
                         width: parent.width
-                        height: 28
+                        property bool itemVisible: modelData.visible !== undefined ? modelData.visible : true
+                        visible: itemVisible
+                        height: itemVisible ? 28 : 0
                         radius: Theme.cornerRadius - 2
                         color: menuArea.containsMouse 
                             ? (modelData.dangerous ? Theme.withAlpha(Theme.error, 0.15) : Theme.withAlpha(Theme.primary, 0.15)) 
@@ -1034,6 +1204,7 @@ DesktopPluginComponent {
                                 size: 14
                                 color: modelData.dangerous && menuArea.containsMouse ? Theme.error : Theme.surfaceText
                                 anchors.verticalCenter: parent.verticalCenter
+                                visible: parent.parent.itemVisible
                             }
 
                             StyledText {
@@ -1042,6 +1213,7 @@ DesktopPluginComponent {
                                 color: modelData.dangerous && menuArea.containsMouse ? Theme.error : Theme.surfaceText
                                 anchors.verticalCenter: parent.verticalCenter
                                 elide: Text.ElideRight
+                                visible: parent.parent.itemVisible
                             }
                         }
 
@@ -1231,6 +1403,133 @@ DesktopPluginComponent {
         }
     }
 
+    // Create Folder/File Dialog
+    Popup {
+        id: createDialog
+        parent: root
+        width: 260
+        height: 156
+        anchors.centerIn: parent
+        padding: 0
+        modal: false
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        property bool isFolder: true
+        property var inputField: null
+
+        onOpened: {
+            Qt.callLater(() => {
+                if (createDialog.inputField) {
+                    createDialog.inputField.forceActiveFocus();
+                    createDialog.inputField.selectAll();
+                }
+            });
+        }
+
+        background: Rectangle {
+            color: "transparent"
+        }
+
+        contentItem: Rectangle {
+            color: Theme.surfaceContainer
+            radius: Theme.cornerRadius
+            border.color: Theme.withAlpha(Theme.outline, 0.15)
+            border.width: 1
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: Theme.spacingM
+                spacing: Theme.spacingS
+
+                StyledText {
+                    text: createDialog.isFolder ? I18n.tr("New Folder") : I18n.tr("New Document")
+                    font.bold: true
+                    font.pixelSize: Theme.fontSizeMedium
+                    color: Theme.surfaceText
+                }
+
+                Row {
+                    width: parent.width
+                    spacing: Theme.spacingS
+
+                    DankTextField {
+                        id: createField
+                        width: parent.width
+                        placeholderText: createDialog.isFolder ? I18n.tr("Folder name...") : I18n.tr("File name...")
+                        focus: true
+                        onAccepted: createDialog.performCreate()
+
+                        Component.onCompleted: {
+                            createDialog.inputField = createField;
+                        }
+                    }
+                }
+
+                Row {
+                    width: parent.width
+                    spacing: Theme.spacingS
+                    layoutDirection: Qt.RightToLeft
+
+                    DankButton {
+                        text: I18n.tr("Create")
+                        backgroundColor: Theme.primary
+                        textColor: Theme.primaryText
+                        onClicked: createDialog.performCreate()
+                    }
+
+                    DankButton {
+                        text: I18n.tr("Cancel")
+                        backgroundColor: Theme.surfaceContainerHigh
+                        textColor: Theme.surfaceText
+                        onClicked: createDialog.close()
+                    }
+                }
+            }
+        }
+
+        function showFor(folderOnly) {
+            createDialog.isFolder = !!folderOnly;
+            if (createDialog.inputField) {
+                createDialog.inputField.text = createDialog.isFolder ? "New Folder" : "New Document.txt";
+            }
+            createDialog.open();
+        }
+
+        function performCreate() {
+            if (!createDialog.inputField) {
+                createDialog.close();
+                return;
+            }
+            const name = createDialog.inputField.text.trim();
+            if (name.length === 0) {
+                createDialog.close();
+                return;
+            }
+
+            let pathStr = String(root.targetFolderUrl);
+            if (pathStr.startsWith("file://")) {
+                pathStr = pathStr.substring(7);
+            }
+            if (pathStr.startsWith("localhost/")) {
+                pathStr = pathStr.substring(9);
+            }
+            
+            const targetPath = pathStr + "/" + name;
+            
+            try {
+                if (createDialog.isFolder) {
+                    Quickshell.execDetached(["mkdir", "-p", targetPath]);
+                } else {
+                    Quickshell.execDetached(["touch", targetPath]);
+                }
+            } catch (e) {
+                ToastService.showToast("Create error: " + e.message, ToastService.levelError);
+            }
+            createDialog.close();
+        }
+    }
+
     // Folder Switcher Dropdown Popup
     Popup {
         id: folderDropdown
@@ -1262,6 +1561,7 @@ DesktopPluginComponent {
 
                 Repeater {
                     model: [
+                        { label: I18n.tr("Home"), value: "home", icon: "home" },
                         { label: I18n.tr("Desktop"), value: "desktop", icon: "desktop_mac" },
                         { label: I18n.tr("Downloads"), value: "downloads", icon: "download" },
                         { label: I18n.tr("Music"), value: "music", icon: "music_note" },
@@ -1318,6 +1618,88 @@ DesktopPluginComponent {
                                         pluginService.savePluginData(pluginId, "folderType", modelData.value);
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Create Dropdown Popup
+    Popup {
+        id: createDropdown
+        parent: createBtn
+        width: 140
+        height: createDropdownColumn.implicitHeight + Theme.spacingS * 2
+        padding: 0
+        modal: true
+        dim: false
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        x: createBtn.width - createDropdown.width
+        y: createBtn.height + 4
+
+        background: Rectangle {
+            color: "transparent"
+        }
+
+        contentItem: Rectangle {
+            color: Theme.surfaceContainer
+            radius: Theme.cornerRadius
+            border.color: Theme.withAlpha(Theme.outline, 0.15)
+            border.width: 1
+
+            Column {
+                id: createDropdownColumn
+                anchors.fill: parent
+                anchors.margins: Theme.spacingS
+                spacing: 2
+
+                Repeater {
+                    model: [
+                        { label: I18n.tr("New Folder"), value: "folder", icon: "create_new_folder" },
+                        { label: I18n.tr("New Document"), value: "file", icon: "note_add" }
+                    ]
+
+                    delegate: Rectangle {
+                        width: parent.width
+                        height: 28
+                        radius: Theme.cornerRadius - 2
+                        color: createDropdownItemArea.containsMouse 
+                            ? Theme.withAlpha(Theme.primary, 0.15) 
+                            : "transparent"
+
+                        Row {
+                            anchors.left: parent.left
+                            anchors.leftMargin: Theme.spacingS
+                            anchors.right: parent.right
+                            anchors.rightMargin: Theme.spacingS
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: Theme.spacingS
+
+                            DankIcon {
+                                name: modelData.icon
+                                size: 14
+                                color: Theme.surfaceText
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            StyledText {
+                                text: modelData.label
+                                font.pixelSize: Theme.fontSizeSmall
+                                color: Theme.surfaceText
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+
+                        MouseArea {
+                            id: createDropdownItemArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                createDropdown.close();
+                                createDialog.showFor(modelData.value === "folder");
                             }
                         }
                     }
