@@ -130,17 +130,26 @@ DesktopPluginComponent {
         
         const pattern = root.searchPattern.toLowerCase();
         for (let i = 0; i < folderModel.count; i++) {
-            const fName = folderModel.get(i, "fileName");
-            const fPath = folderModel.get(i, "filePath");
-            const fIsDir = folderModel.get(i, "fileIsDir");
-            
-            if (pattern === "" || fName.toLowerCase().indexOf(pattern) !== -1) {
-                filteredModel.append({
-                    filePath: fPath,
-                    fileName: fName,
-                    fileIsDir: fIsDir,
-                    index: i
-                });
+            try {
+                const fName = folderModel.get(i, "fileName");
+                const fPath = folderModel.get(i, "filePath");
+                const fIsDir = folderModel.get(i, "fileIsDir");
+                
+                if (fName === undefined || fName === null || fPath === undefined || fPath === null) {
+                    continue;
+                }
+                
+                const nameStr = String(fName);
+                if (pattern === "" || nameStr.toLowerCase().indexOf(pattern) !== -1) {
+                    filteredModel.append({
+                        filePath: String(fPath),
+                        fileName: nameStr,
+                        fileIsDir: !!fIsDir,
+                        index: i
+                    });
+                }
+            } catch (e) {
+                console.log("Error processing file at index " + i + ": " + e);
             }
         }
     }
