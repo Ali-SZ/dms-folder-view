@@ -1267,6 +1267,7 @@ DesktopPluginComponent {
                         { label: I18n.tr("Music"), value: "music", icon: "music_note" },
                         { label: I18n.tr("Videos"), value: "videos", icon: "movie" },
                         { label: I18n.tr("Documents"), value: "documents", icon: "description" },
+                        { label: I18n.tr("Trash"), value: "trash", icon: "delete" },
                         { label: I18n.tr("Custom..."), value: "custom", icon: "folder" }
                     ]
 
