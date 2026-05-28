@@ -26,6 +26,28 @@ PluginSettings {
             unit: "%"
         }
 
+        SliderSetting {
+            settingKey: "cellSize"
+            label: I18n.tr("Icon Size")
+            description: I18n.tr("Adjust the size of file and folder icons.")
+            defaultValue: 84
+            minimum: 64
+            maximum: 128
+            unit: "px"
+        }
+
+        SelectionSetting {
+            settingKey: "viewMode"
+            label: I18n.tr("View Mode")
+            description: I18n.tr("Choose how files and folders are displayed.")
+            options: [
+                { label: I18n.tr("Grid View"), value: "grid" },
+                { label: I18n.tr("List View"), value: "list" },
+                { label: I18n.tr("Compact View"), value: "compact" }
+            ]
+            defaultValue: "grid"
+        }
+
         ToggleSetting {
             settingKey: "showHeader"
             label: I18n.tr("Show Folder Header")

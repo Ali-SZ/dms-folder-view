@@ -32,6 +32,19 @@ DesktopPluginComponent {
     readonly property string viewMode: pluginData.viewMode ?? "grid"
     readonly property bool showHeader: pluginData.showHeader ?? true
 
+    readonly property bool isScrolledDown: {
+        if (viewMode === "grid") {
+            return (typeof fileGrid !== "undefined" && fileGrid) ? fileGrid.contentY > 50 : false;
+        }
+        if (viewMode === "list") {
+            return (typeof fileList !== "undefined" && fileList) ? fileList.contentY > 50 : false;
+        }
+        if (viewMode === "compact") {
+            return (typeof fileCompact !== "undefined" && fileCompact) ? fileCompact.contentY > 50 : false;
+        }
+        return false;
+    }
+
     // Resolved Folder Settings & URL
     readonly property string folderType: pluginData.folderType ?? "desktop"
     readonly property string customFolderPath: pluginData.customFolderPath ?? ""
@@ -276,6 +289,16 @@ DesktopPluginComponent {
 
     onSearchPatternChanged: updateFilteredModel()
 
+    function scrollToTop() {
+        if (viewMode === "grid" && typeof fileGrid !== "undefined" && fileGrid) {
+            fileGrid.contentY = 0;
+        } else if (viewMode === "list" && typeof fileList !== "undefined" && fileList) {
+            fileList.contentY = 0;
+        } else if (viewMode === "compact" && typeof fileCompact !== "undefined" && fileCompact) {
+            fileCompact.contentY = 0;
+        }
+    }
+
     Connections {
         target: folderModel
         function onStatusChanged() {
@@ -507,6 +530,28 @@ DesktopPluginComponent {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: Theme.spacingS
 
+                    // Back to Top Button
+                    MouseArea {
+                        id: backToTopBtn
+                        width: visible ? 20 : 0
+                        height: 20
+                        visible: root.isScrolledDown
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.scrollToTop()
+
+                        Behavior on width { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+
+                        DankIcon {
+                            anchors.centerIn: parent
+                            name: "arrow_upward"
+                            size: 16
+                            color: backToTopBtn.containsMouse ? Theme.primary : Theme.surfaceText
+                            opacity: backToTopBtn.containsMouse ? 1.0 : 0.7
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                        }
+                    }
+
                     // Premium Dynamic Expanding Search Input
                     Rectangle {
                         id: headerSearchContainer
@@ -630,25 +675,6 @@ DesktopPluginComponent {
                         }
                     }
 
-                    // View Mode Button
-                    MouseArea {
-                        id: viewModeBtn
-                        width: 20
-                        height: 20
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: viewModeDropdown.open()
-
-                        DankIcon {
-                            anchors.centerIn: parent
-                            name: root.viewMode === "grid" ? "grid_view" : "view_list"
-                            size: 16
-                            color: viewModeBtn.containsMouse ? Theme.primary : Theme.surfaceText
-                            opacity: viewModeBtn.containsMouse ? 1.0 : 0.7
-                            Behavior on color { ColorAnimation { duration: 150 } }
-                        }
-                    }
-
                     // Sort By Button
                     MouseArea {
                         id: sortByBtn
@@ -671,25 +697,6 @@ DesktopPluginComponent {
                             size: 16
                             color: sortByBtn.containsMouse ? Theme.primary : Theme.surfaceText
                             opacity: sortByBtn.containsMouse ? 1.0 : 0.7
-                            Behavior on color { ColorAnimation { duration: 150 } }
-                        }
-                    }
-
-                    // Icon Size Button
-                    MouseArea {
-                        id: sizeBtn
-                        width: 20
-                        height: 20
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: sizeDropdown.open()
-
-                        DankIcon {
-                            anchors.centerIn: parent
-                            name: "zoom_in"
-                            size: 16
-                            color: sizeBtn.containsMouse ? Theme.primary : Theme.surfaceText
-                            opacity: sizeBtn.containsMouse ? 1.0 : 0.7
                             Behavior on color { ColorAnimation { duration: 150 } }
                         }
                     }
@@ -1584,92 +1591,7 @@ DesktopPluginComponent {
         }
     }
 
-    // View Mode Dropdown Popup
-    Popup {
-        id: viewModeDropdown
-        parent: viewModeBtn
-        width: 130
-        height: viewModeDropdownColumn.implicitHeight + Theme.spacingS * 2
-        padding: 0
-        modal: true
-        dim: false
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        x: viewModeBtn.width - viewModeDropdown.width
-        y: viewModeBtn.height + 4
 
-        background: Rectangle {
-            color: "transparent"
-        }
-
-        contentItem: Rectangle {
-            color: Theme.surfaceContainer
-            radius: Theme.cornerRadius
-            border.color: Theme.withAlpha(Theme.outline, 0.15)
-            border.width: 1
-
-            Column {
-                id: viewModeDropdownColumn
-                anchors.fill: parent
-                anchors.margins: Theme.spacingS
-                spacing: 2
-
-                Repeater {
-                    model: [
-                        { label: I18n.tr("Grid View"), value: "grid", icon: "grid_view" },
-                        { label: I18n.tr("List View"), value: "list", icon: "view_list" },
-                        { label: I18n.tr("Compact View"), value: "compact", icon: "view_stream" }
-                    ]
-
-                    delegate: Rectangle {
-                        width: parent.width
-                        height: 28
-                        radius: Theme.cornerRadius - 2
-                        color: viewModeArea.containsMouse 
-                            ? Theme.withAlpha(Theme.primary, 0.15) 
-                            : "transparent"
-
-                        Row {
-                            anchors.left: parent.left
-                            anchors.leftMargin: Theme.spacingS
-                            anchors.right: parent.right
-                            anchors.rightMargin: Theme.spacingS
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: Theme.spacingS
-
-                            DankIcon {
-                                name: modelData.icon
-                                size: 14
-                                color: root.viewMode === modelData.value ? Theme.primary : Theme.surfaceText
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-
-                            StyledText {
-                                text: modelData.label
-                                font.pixelSize: Theme.fontSizeSmall
-                                font.bold: root.viewMode === modelData.value
-                                color: root.viewMode === modelData.value ? Theme.primary : Theme.surfaceText
-                                anchors.verticalCenter: parent.verticalCenter
-                                elide: Text.ElideRight
-                            }
-                        }
-
-                        MouseArea {
-                            id: viewModeArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                viewModeDropdown.close();
-                                if (pluginService) {
-                                    pluginService.savePluginData(pluginId, "viewMode", modelData.value);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     // Sort By Dropdown Popup
     Popup {
@@ -1759,93 +1681,7 @@ DesktopPluginComponent {
         }
     }
 
-    // Size Dropdown Popup
-    Popup {
-        id: sizeDropdown
-        parent: sizeBtn
-        width: 140
-        height: sizeDropdownColumn.implicitHeight + Theme.spacingS * 2
-        padding: 0
-        modal: true
-        dim: false
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        x: sizeBtn.width - sizeDropdown.width
-        y: sizeBtn.height + 4
 
-        background: Rectangle {
-            color: "transparent"
-        }
-
-        contentItem: Rectangle {
-            color: Theme.surfaceContainer
-            radius: Theme.cornerRadius
-            border.color: Theme.withAlpha(Theme.outline, 0.15)
-            border.width: 1
-
-            Column {
-                id: sizeDropdownColumn
-                anchors.fill: parent
-                anchors.margins: Theme.spacingS
-                spacing: 2
-
-                Repeater {
-                    model: [
-                        { label: I18n.tr("Small (64px)"), value: 64, icon: "photo_size_select_small" },
-                        { label: I18n.tr("Medium (84px)"), value: 84, icon: "photo_size_select_large" },
-                        { label: I18n.tr("Large (104px)"), value: 104, icon: "photo_size_select_actual" },
-                        { label: I18n.tr("Extra Large (128px)"), value: 128, icon: "aspect_ratio" }
-                    ]
-
-                    delegate: Rectangle {
-                        width: parent.width
-                        height: 28
-                        radius: Theme.cornerRadius - 2
-                        color: sizeArea.containsMouse 
-                            ? Theme.withAlpha(Theme.primary, 0.15) 
-                            : "transparent"
-
-                        Row {
-                            anchors.left: parent.left
-                            anchors.leftMargin: Theme.spacingS
-                            anchors.right: parent.right
-                            anchors.rightMargin: Theme.spacingS
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: Theme.spacingS
-
-                            DankIcon {
-                                name: modelData.icon
-                                size: 14
-                                color: root.cellSize === modelData.value ? Theme.primary : Theme.surfaceText
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-
-                            StyledText {
-                                text: modelData.label
-                                font.pixelSize: Theme.fontSizeSmall
-                                font.bold: root.cellSize === modelData.value
-                                color: root.cellSize === modelData.value ? Theme.primary : Theme.surfaceText
-                                anchors.verticalCenter: parent.verticalCenter
-                                elide: Text.ElideRight
-                            }
-                        }
-
-                        MouseArea {
-                            id: sizeArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                sizeDropdown.close();
-                                if (pluginService) {
-                                    pluginService.savePluginData(pluginId, "cellSize", modelData.value);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     // Native Folder Dialog Selector
     FolderDialog {
