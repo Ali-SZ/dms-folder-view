@@ -23,8 +23,13 @@ Item {
         return ["mp3", "wav", "ogg", "flac", "m4a"].indexOf(ext) !== -1;
     }
 
+    property bool isPDF: {
+        const ext = fileName.split('.').pop().toLowerCase();
+        return ext === "pdf";
+    }
+
     property string artSource: ""
-    property bool showThumbnail: (isImage || isAudio) && !isDir && artSource !== "failed"
+    property bool showThumbnail: (isImage || isAudio || isPDF) && !isDir && artSource !== "failed"
 
     DankIcon {
         anchors.centerIn: parent
@@ -103,14 +108,22 @@ Item {
         return path;
     }
 
-    function extractArt() {
-        if (!isAudio || isDir || artSource !== "" || filePath === "") return;
+    function requestThumbnail() {
+        if (isDir || artSource !== "" || filePath === "") return;
         
         const rawPath = _cleanPath(filePath);
-        const cacheDir = Paths.strip(Paths.cache) + "/folderView/covers";
+        const cacheDir = Paths.strip(Paths.cache) + "/folderView/thumbs";
         const hash = djb2Hash(rawPath);
         const cachePath = cacheDir + "/" + hash + ".jpg";
         
+        if (isAudio) {
+            extractAudioArt(rawPath, cacheDir, cachePath, hash);
+        } else if (isPDF) {
+            extractPDFThumb(rawPath, cacheDir, cachePath, hash);
+        }
+    }
+
+    function extractAudioArt(rawPath, cacheDir, cachePath, hash) {
         Quickshell.execDetached(["mkdir", "-p", cacheDir]);
         
         Proc.runCommand("check-art-" + hash, ["test", "-f", cachePath], (out, code) => {
@@ -129,8 +142,30 @@ Item {
         });
     }
 
-    onFilePathChanged: extractArt()
-    onIsAudioChanged: extractArt()
+    function extractPDFThumb(rawPath, cacheDir, cachePath, hash) {
+        Quickshell.execDetached(["mkdir", "-p", cacheDir]);
+        
+        Proc.runCommand("check-pdf-" + hash, ["test", "-f", cachePath], (out, code) => {
+            if (code === 0) {
+                root.artSource = "file://" + cachePath;
+            } else {
+                // pdftoppm adds .jpg automatically if we give it a prefix
+                const prefix = cacheDir + "/" + hash;
+                const cmd = ["pdftoppm", "-jpeg", "-singlefile", "-scale-to", "128", rawPath, prefix];
+                Proc.runCommand("extract-pdf-" + hash, cmd, (out2, code2) => {
+                    if (code2 === 0) {
+                        root.artSource = "file://" + cachePath;
+                    } else {
+                        root.artSource = "failed";
+                    }
+                }, 50);
+            }
+        });
+    }
 
-    Component.onCompleted: extractArt()
+    onFilePathChanged: requestThumbnail()
+    onIsAudioChanged: requestThumbnail()
+    onIsPDFChanged: requestThumbnail()
+
+    Component.onCompleted: requestThumbnail()
 }
