@@ -1250,6 +1250,7 @@ DesktopPluginComponent {
                                 infoDialog.showFor(quickMenu.currentPath, quickMenu.currentName, quickMenu.currentIsDir);
                             }
                         },
+                        { isSeparator: true },
                         {
                             text: I18n.tr("Move to Trash"),
                             icon: "delete",
@@ -1265,15 +1266,27 @@ DesktopPluginComponent {
 
                     delegate: Rectangle {
                         width: parent.width
+                        property bool isSeparator: !!modelData.isSeparator
                         property bool itemVisible: modelData.visible !== undefined ? modelData.visible : true
                         visible: itemVisible
-                        height: itemVisible ? 28 : 0
-                        radius: Theme.cornerRadius - 2
-                        color: menuArea.containsMouse 
-                            ? (modelData.dangerous ? Theme.withAlpha(Theme.error, 0.15) : Theme.withAlpha(Theme.primary, 0.15)) 
-                            : "transparent"
+                        height: !itemVisible ? 0 : (isSeparator ? 9 : 28)
+                        radius: isSeparator ? 0 : Theme.cornerRadius - 2
+                        color: isSeparator 
+                            ? "transparent"
+                            : (menuArea.containsMouse 
+                                ? (modelData.dangerous ? Theme.withAlpha(Theme.error, 0.15) : Theme.withAlpha(Theme.primary, 0.15)) 
+                                : "transparent")
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: parent.width - Theme.spacingS * 2
+                            height: 1
+                            color: Theme.withAlpha(Theme.outline, 0.15)
+                            visible: isSeparator
+                        }
 
                         Row {
+                            visible: !isSeparator
                             anchors.left: parent.left
                             anchors.leftMargin: Theme.spacingS
                             anchors.right: parent.right
@@ -1282,26 +1295,27 @@ DesktopPluginComponent {
                             spacing: Theme.spacingS
 
                             DankIcon {
-                                name: modelData.icon
+                                name: modelData.icon || ""
                                 size: 14
                                 color: modelData.dangerous && menuArea.containsMouse ? Theme.error : Theme.surfaceText
                                 anchors.verticalCenter: parent.verticalCenter
-                                visible: parent.parent.itemVisible
+                                visible: !isSeparator && parent.parent.itemVisible
                             }
 
                             StyledText {
-                                text: modelData.text
+                                text: modelData.text || ""
                                 font.pixelSize: Theme.fontSizeSmall
                                 color: modelData.dangerous && menuArea.containsMouse ? Theme.error : Theme.surfaceText
                                 anchors.verticalCenter: parent.verticalCenter
                                 elide: Text.ElideRight
-                                visible: parent.parent.itemVisible
+                                visible: !isSeparator && parent.parent.itemVisible
                             }
                         }
 
                         MouseArea {
                             id: menuArea
                             anchors.fill: parent
+                            enabled: !isSeparator
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: modelData.action()
