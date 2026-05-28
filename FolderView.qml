@@ -1242,6 +1242,15 @@ DesktopPluginComponent {
                             }
                         },
                         {
+                            text: I18n.tr("Info"),
+                            icon: "info",
+                            visible: root.selectedFilePaths.length <= 1,
+                            action: function() {
+                                quickMenu.close();
+                                infoDialog.showFor(quickMenu.currentPath, quickMenu.currentName, quickMenu.currentIsDir);
+                            }
+                        },
+                        {
                             text: I18n.tr("Move to Trash"),
                             icon: "delete",
                             dangerous: true,
@@ -1306,6 +1315,12 @@ DesktopPluginComponent {
     // Rename Dialog
     FolderViewRenameDialog {
         id: renameDialog
+        parent: root
+    }
+
+    // Info Dialog
+    FolderViewInfoDialog {
+        id: infoDialog
         parent: root
     }
 
