@@ -31,6 +31,8 @@ DesktopPluginComponent {
     readonly property string sortBy: pluginData.sortBy ?? "name"
     readonly property string viewMode: pluginData.viewMode ?? "grid"
     readonly property bool showHeader: pluginData.showHeader ?? true
+    readonly property var pinnedPaths: pluginData.pinnedPaths ?? []
+    onPinnedPathsChanged: updateFilteredModel()
 
     readonly property bool isScrolledDown: {
         if (viewMode === "grid") {
@@ -194,17 +196,19 @@ DesktopPluginComponent {
         return path;
     }
 
-    function smartTruncate(name, full) {
-        if (full || name.length <= 10) return name;
+    function smartTruncate(name, full, availableWidth, fontSize) {
+        if (full || !name || name.length <= 10) return name;
         
-        let limit = 20; // Conservative limit for 2 lines in Grid
-        if (root.viewMode === "list") limit = 55;
-        if (root.viewMode === "compact") limit = 28;
+        let width = availableWidth && availableWidth > 0 ? availableWidth : 80;
+        let size = fontSize && fontSize > 0 ? fontSize : 11;
+        
+        let avgCharWidth = 0.52 * size;
+        let charsPerLine = Math.floor(width / avgCharWidth);
+        let limit = Math.max(12, charsPerLine * 2);
 
         if (name.length <= limit) return name;
 
         const lastDot = name.lastIndexOf('.');
-        // If no extension or extension is unusually long, just cut the end
         if (lastDot <= 0 || name.length - lastDot > 6) {
             return name.substring(0, limit - 3) + "...";
         }
@@ -212,16 +216,31 @@ DesktopPluginComponent {
         const ext = name.substring(lastDot);
         const base = name.substring(0, lastDot);
         
-        // Ensure we keep extension + 2 chars of filename at the end (e.g., "fi.mp3")
         const keepEnd = 2 + ext.length;
-        const keepStart = limit - keepEnd - 3; // 3 for "..."
+        const keepStart = limit - keepEnd - 3;
 
         if (keepStart < 3) {
-            // Final fallback if name is extremely constrained
-            return name.substring(0, limit - ext.length - 3) + "..." + ext;
+            let minLimit = ext.length + 5;
+            if (name.length <= minLimit) return name;
+            return name.substring(0, Math.max(2, minLimit - ext.length - 3)) + "..." + ext;
         }
 
         return base.substring(0, keepStart) + "..." + base.substring(base.length - 2) + ext;
+    }
+
+    function togglePin(filePath) {
+        if (!pluginService) return;
+        let pins = [];
+        for (let i = 0; i < root.pinnedPaths.length; i++) {
+            pins.push(root.pinnedPaths[i]);
+        }
+        let index = pins.indexOf(filePath);
+        if (index !== -1) {
+            pins.splice(index, 1);
+        } else {
+            pins.push(filePath);
+        }
+        pluginService.savePluginData(pluginId, "pinnedPaths", pins);
     }
 
     function pasteFromClipboard() {
@@ -262,6 +281,11 @@ DesktopPluginComponent {
         if (folderModel.status !== FolderListModel.Ready) return;
         
         const pattern = root.searchPattern.toLowerCase();
+        let pinnedDirs = [];
+        let pinnedFiles = [];
+        let unpinnedDirs = [];
+        let unpinnedFiles = [];
+
         for (let i = 0; i < folderModel.count; i++) {
             try {
                 const fName = folderModel.get(i, "fileName");
@@ -274,17 +298,38 @@ DesktopPluginComponent {
                 
                 const nameStr = String(fName);
                 if (pattern === "" || nameStr.toLowerCase().indexOf(pattern) !== -1) {
-                    filteredModel.append({
-                        filePath: String(fPath),
+                    let pathStr = String(fPath);
+                    let item = {
+                        filePath: pathStr,
                         fileName: nameStr,
                         fileIsDir: !!fIsDir,
                         index: i
-                    });
+                    };
+                    
+                    let isPinned = root.pinnedPaths.indexOf(pathStr) !== -1;
+                    if (isPinned) {
+                        if (fIsDir) {
+                            pinnedDirs.push(item);
+                        } else {
+                            pinnedFiles.push(item);
+                        }
+                    } else {
+                        if (fIsDir) {
+                            unpinnedDirs.push(item);
+                        } else {
+                            unpinnedFiles.push(item);
+                        }
+                    }
                 }
             } catch (e) {
                 console.log("Error processing file at index " + i + ": " + e);
             }
         }
+
+        pinnedDirs.forEach(function(item) { filteredModel.append(item); });
+        pinnedFiles.forEach(function(item) { filteredModel.append(item); });
+        unpinnedDirs.forEach(function(item) { filteredModel.append(item); });
+        unpinnedFiles.forEach(function(item) { filteredModel.append(item); });
     }
 
     onSearchPatternChanged: updateFilteredModel()
@@ -807,8 +852,8 @@ DesktopPluginComponent {
                                 // File/Folder Name
                                 StyledText {
                                     width: parent.width
-                                    text: root.smartTruncate(fileName, isSelected && root.selectedFilePaths.length === 1)
                                     font.pixelSize: Theme.fontSizeSmall - 1
+                                    text: root.smartTruncate(fileName, isSelected && root.selectedFilePaths.length === 1, width, font.pixelSize)
                                     color: Theme.surfaceText
                                     horizontalAlignment: Text.AlignHCenter
                                     elide: Text.ElideNone
@@ -816,6 +861,18 @@ DesktopPluginComponent {
                                     wrapMode: Text.WrapAnywhere
                                     opacity: itemHover.containsMouse ? 1.0 : 0.85
                                 }
+                            }
+
+                            // Pin indicator overlay
+                            DankIcon {
+                                name: "push_pin"
+                                size: 12
+                                color: Theme.primary
+                                anchors.top: parent.top
+                                anchors.topMargin: Theme.spacingXS + 2
+                                anchors.right: parent.right
+                                anchors.rightMargin: Theme.spacingXS + 2
+                                visible: root.pinnedPaths.indexOf(filePath) !== -1
                             }
 
                             MouseArea {
@@ -963,16 +1020,27 @@ DesktopPluginComponent {
                                 }
 
                                 StyledText {
-                                    text: root.smartTruncate(fileName, isSelected && root.selectedFilePaths.length === 1)
                                     font.pixelSize: Theme.fontSizeSmall
+                                    width: parent.width - Math.round(20 * root.sizeScale) - (root.pinnedPaths.indexOf(filePath) !== -1 ? 32 : 12)
+                                    text: root.smartTruncate(fileName, isSelected && root.selectedFilePaths.length === 1, width, font.pixelSize)
                                     color: Theme.surfaceText
                                     anchors.verticalCenter: (isSelected && root.selectedFilePaths.length === 1) ? undefined : parent.verticalCenter
                                     anchors.top: (isSelected && root.selectedFilePaths.length === 1) ? parent.top : undefined
                                     elide: Text.ElideNone
                                     wrapMode: Text.WrapAnywhere
                                     maximumLineCount: (isSelected && root.selectedFilePaths.length === 1) ? 5 : 2
-                                    width: parent.width - Math.round(20 * root.sizeScale) - 12
                                 }
+                            }
+
+                            // Pin indicator
+                            DankIcon {
+                                name: "push_pin"
+                                size: 10
+                                color: Theme.primary
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.right: parent.right
+                                anchors.rightMargin: Theme.spacingS
+                                visible: root.pinnedPaths.indexOf(filePath) !== -1
                             }
 
                             MouseArea {
@@ -1120,16 +1188,27 @@ DesktopPluginComponent {
                                 }
 
                                 StyledText {
-                                    text: root.smartTruncate(fileName, isSelected && root.selectedFilePaths.length === 1)
                                     font.pixelSize: Theme.fontSizeSmall - 1
+                                    width: parent.width - Math.round(16 * root.sizeScale) - (root.pinnedPaths.indexOf(filePath) !== -1 ? 28 : 12)
+                                    text: root.smartTruncate(fileName, isSelected && root.selectedFilePaths.length === 1, width, font.pixelSize)
                                     color: Theme.surfaceText
                                     anchors.verticalCenter: (isSelected && root.selectedFilePaths.length === 1) ? undefined : parent.verticalCenter
                                     anchors.top: (isSelected && root.selectedFilePaths.length === 1) ? parent.top : undefined
                                     elide: Text.ElideNone
                                     wrapMode: Text.WrapAnywhere
                                     maximumLineCount: (isSelected && root.selectedFilePaths.length === 1) ? 5 : 2
-                                    width: parent.width - Math.round(16 * root.sizeScale) - 12
                                 }
+                            }
+
+                            // Pin indicator
+                            DankIcon {
+                                name: "push_pin"
+                                size: 10
+                                color: Theme.primary
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.right: parent.right
+                                anchors.rightMargin: Theme.spacingS
+                                visible: root.pinnedPaths.indexOf(filePath) !== -1
                             }
 
                             MouseArea {
@@ -1266,6 +1345,14 @@ DesktopPluginComponent {
                             }
                         },
                         {
+                            actionName: "pin",
+                            visible: true,
+                            action: function() {
+                                quickMenu.close();
+                                root.togglePin(quickMenu.currentPath);
+                            }
+                        },
+                        {
                             text: I18n.tr("Copy"),
                             icon: "content_copy",
                             visible: true,
@@ -1363,7 +1450,9 @@ DesktopPluginComponent {
                             spacing: Theme.spacingS
 
                             DankIcon {
-                                name: modelData.icon || ""
+                                name: modelData.actionName === "pin"
+                                    ? "push_pin"
+                                    : (modelData.icon || "")
                                 size: 14
                                 color: modelData.dangerous && menuArea.containsMouse ? Theme.error : Theme.surfaceText
                                 anchors.verticalCenter: parent.verticalCenter
@@ -1371,7 +1460,9 @@ DesktopPluginComponent {
                             }
 
                             StyledText {
-                                text: modelData.text || ""
+                                text: modelData.actionName === "pin"
+                                    ? (root.pinnedPaths.indexOf(quickMenu.currentPath) !== -1 ? I18n.tr("Unpin from Top") : I18n.tr("Pin to Top"))
+                                    : (modelData.text || "")
                                 font.pixelSize: Theme.fontSizeSmall
                                 color: modelData.dangerous && menuArea.containsMouse ? Theme.error : Theme.surfaceText
                                 anchors.verticalCenter: parent.verticalCenter
