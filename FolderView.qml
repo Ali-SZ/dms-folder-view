@@ -302,8 +302,7 @@ DesktopPluginComponent {
                     let item = {
                         filePath: pathStr,
                         fileName: nameStr,
-                        fileIsDir: !!fIsDir,
-                        index: i
+                        fileIsDir: !!fIsDir
                     };
                     
                     let isPinned = root.pinnedPaths.indexOf(pathStr) !== -1;
