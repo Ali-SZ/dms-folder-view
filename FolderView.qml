@@ -182,29 +182,33 @@ DesktopPluginComponent {
     }
 
     function smartTruncate(name, full) {
-        if (full || name.length <= 12) return name;
+        if (full || name.length <= 10) return name;
         
-        let limit = 26; // Goal for 2 lines
-        if (root.viewMode === "list") limit = 60;
-        if (root.viewMode === "compact") limit = 32;
+        let limit = 20; // Conservative limit for 2 lines in Grid
+        if (root.viewMode === "list") limit = 55;
+        if (root.viewMode === "compact") limit = 28;
 
         if (name.length <= limit) return name;
 
         const lastDot = name.lastIndexOf('.');
+        // If no extension or extension is unusually long, just cut the end
         if (lastDot <= 0 || name.length - lastDot > 6) {
             return name.substring(0, limit - 3) + "...";
         }
 
         const ext = name.substring(lastDot);
         const base = name.substring(0, lastDot);
-        const avail = limit - ext.length - 3;
         
-        if (avail <= 4) return name.substring(0, limit - 3) + "...";
+        // Ensure we keep extension + 2 chars of filename at the end (e.g., "fi.mp3")
+        const keepEnd = 2 + ext.length;
+        const keepStart = limit - keepEnd - 3; // 3 for "..."
 
-        const keepStart = Math.ceil(avail * 0.7);
-        const keepEnd = avail - keepStart;
+        if (keepStart < 3) {
+            // Final fallback if name is extremely constrained
+            return name.substring(0, limit - ext.length - 3) + "..." + ext;
+        }
 
-        return base.substring(0, keepStart) + "..." + (keepEnd > 0 ? base.substring(base.length - keepEnd) : "") + ext;
+        return base.substring(0, keepStart) + "..." + base.substring(base.length - 2) + ext;
     }
 
     function pasteFromClipboard() {
