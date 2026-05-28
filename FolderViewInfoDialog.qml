@@ -76,18 +76,16 @@ Popup {
                 color: Theme.withAlpha(Theme.outline, 0.1)
             }
 
-            // Info Grid
-            Grid {
+            // Info List
+            Column {
                 width: parent.width
-                columns: 2
                 spacing: Theme.spacingS
-                verticalItemAlignment: Grid.AlignVCenter
 
                 readonly property int labelWidth: 90
 
                 // Rows helper component
                 component InfoRow: Item {
-                    width: contentColumn.width - Theme.spacingM * 2
+                    width: parent.width
                     height: Math.max(label.implicitHeight, value.implicitHeight)
                     property alias labelText: label.text
                     property alias valueText: value.text
@@ -95,7 +93,7 @@ Popup {
                     StyledText {
                         id: label
                         text: ""
-                        width: 90
+                        width: parent.parent.labelWidth
                         font.pixelSize: Theme.fontSizeSmall
                         font.bold: true
                         color: Theme.surfaceVariantText
