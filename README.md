@@ -58,11 +58,12 @@ GPL-3.0
 
 ## Roadmap / TODO
 
-- [ ] **Drag & Drop support:** Drag files directly from the widget into external windows (or vice versa to copy into the folder).
+- [ ] **Drag & Drop support:** Drag files directly from the widget into external windows.
 - [x] **Multi-file operations:** Select multiple items using Ctrl/Shift and perform bulk copies, moves, or trashing.
 - [x] **File Search:** Add a small integrated search field in the header to filter large directories instantly.
 - [x] **Folder & File Creation:** Add a quick action button to create new folders or empty text documents directly within the widget.
-- [ ] **Keyboard Shortcuts:** Add support for F2 (rename), Delete (trash), Ctrl+C/V (copy/paste), and Ctrl+A (select all).
-- [ ] **Enhanced Info UI:** Improve the file/folder details dialog with better formatting and mimetype icons.
-- [ ] **Folder Status:** Display item counts and selection status in the header.
-- [ ] **Thumbnails:** Show image previews instead of generic icons for photos and videos.
+- [ ] **Keyboard Shortcuts:** (Reverted) Experimental support for F2, Delete, etc.
+- [x] **Enhanced Info UI:** Improved file/folder details dialog with structured data and copyable path.
+- [x] **Folder Status:** Display item counts and selection status in the header.
+- [x] **Image & Audio Thumbnails:** Show image previews and album art for music files.
+- [ ] **PDF Thumbnails:** Show first page preview for PDF documents (In progress).
