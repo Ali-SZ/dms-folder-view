@@ -96,37 +96,41 @@ Item {
         return hash.toString(16).padStart(8, '0');
     }
 
+    function _cleanPath(url) {
+        let path = String(url);
+        if (path.startsWith("file://")) path = path.substring(7);
+        if (path.startsWith("localhost/")) path = path.substring(9);
+        return path;
+    }
+
     function extractArt() {
-        if (!isAudio || isDir || artSource !== "") return;
+        if (!isAudio || isDir || artSource !== "" || filePath === "") return;
         
+        const rawPath = _cleanPath(filePath);
         const cacheDir = Paths.strip(Paths.cache) + "/folderView/covers";
-        const hash = djb2Hash(filePath);
+        const hash = djb2Hash(rawPath);
         const cachePath = cacheDir + "/" + hash + ".jpg";
         
-        // Ensure dir exists (minimal overhead if already exists)
         Quickshell.execDetached(["mkdir", "-p", cacheDir]);
         
         Proc.runCommand("check-art-" + hash, ["test", "-f", cachePath], (out, code) => {
             if (code === 0) {
                 root.artSource = "file://" + cachePath;
             } else {
-                // Try extract with ffmpeg
-                // -y (overwrite), -i input, -an (no audio), -vcodec copy (stream copy video/image), -f image2 (output format), output
-                const cmd = ["ffmpeg", "-y", "-i", filePath, "-an", "-vcodec", "copy", "-f", "image2", cachePath];
+                const cmd = ["ffmpeg", "-y", "-i", rawPath, "-an", "-frames:v", "1", "-f", "image2", cachePath];
                 Proc.runCommand("extract-art-" + hash, cmd, (out2, code2) => {
                     if (code2 === 0) {
                         root.artSource = "file://" + cachePath;
                     } else {
                         root.artSource = "failed";
                     }
-                }, 100); // Small debounce
+                }, 50);
             }
         });
     }
 
-    Component.onCompleted: {
-        if (isAudio) {
-            extractArt();
-        }
-    }
+    onFilePathChanged: extractArt()
+    onIsAudioChanged: extractArt()
+
+    Component.onCompleted: extractArt()
 }
