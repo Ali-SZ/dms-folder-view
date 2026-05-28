@@ -170,22 +170,20 @@ DesktopPluginComponent {
         selectionClearTimer.restart();
     }
 
+    function _cleanPath(url) {
+        let path = String(url);
+        if (path.startsWith("file://")) {
+            path = path.substring(7);
+        }
+        if (path.startsWith("localhost/")) {
+            path = path.substring(9);
+        }
+        return path;
+    }
+
     function pasteFromClipboard() {
-        let scriptPath = String(Qt.resolvedUrl("paste.py"));
-        if (scriptPath.startsWith("file://")) {
-            scriptPath = scriptPath.substring(7);
-        }
-        if (scriptPath.startsWith("localhost/")) {
-            scriptPath = scriptPath.substring(9);
-        }
-        
-        let pathStr = String(root.targetFolderUrl);
-        if (pathStr.startsWith("file://")) {
-            pathStr = pathStr.substring(7);
-        }
-        if (pathStr.startsWith("localhost/")) {
-            pathStr = pathStr.substring(9);
-        }
+        let scriptPath = root._cleanPath(Qt.resolvedUrl("paste.py"));
+        let pathStr = root._cleanPath(root.targetFolderUrl);
         
         ToastService.showToast(I18n.tr("Pasting files..."), ToastService.levelInfo);
         Quickshell.execDetached([scriptPath, pathStr]);
@@ -808,7 +806,7 @@ DesktopPluginComponent {
                                         launchPulse.restart();
                                         launchTimer.restart();
                                         // Open file/folder using default system application
-                                        Quickshell.execDetached(["xdg-open", delegateRoot.filePath]);
+                                        Quickshell.execDetached(["xdg-open", root._cleanPath(delegateRoot.filePath)]);
                                         root.clearSelection();
                                     }
                                 }
@@ -954,7 +952,7 @@ DesktopPluginComponent {
                                     if (mouse.button === Qt.LeftButton) {
                                         listDelegateRoot.isLaunching = true;
                                         listLaunchPulse.restart();
-                                        Quickshell.execDetached(["xdg-open", listDelegateRoot.filePath]);
+                                        Quickshell.execDetached(["xdg-open", root._cleanPath(listDelegateRoot.filePath)]);
                                         listLaunchTimer.restart();
                                         root.clearSelection();
                                     }
@@ -1102,7 +1100,7 @@ DesktopPluginComponent {
                                     if (mouse.button === Qt.LeftButton) {
                                         compactDelegateRoot.isLaunching = true;
                                         compactLaunchPulse.restart();
-                                        Quickshell.execDetached(["xdg-open", compactDelegateRoot.filePath]);
+                                        Quickshell.execDetached(["xdg-open", root._cleanPath(compactDelegateRoot.filePath)]);
                                         compactLaunchTimer.restart();
                                         root.clearSelection();
                                     }
@@ -1193,7 +1191,7 @@ DesktopPluginComponent {
                             action: function() {
                                 quickMenu.close();
                                 for (let path of root.selectedFilePaths) {
-                                    Quickshell.execDetached(["xdg-open", path]);
+                                   Quickshell.execDetached(["xdg-open", root._cleanPath(path)]);
                                 }
                                 root.clearSelection();
                             }
@@ -1258,7 +1256,8 @@ DesktopPluginComponent {
                             visible: true,
                             action: function() {
                                 quickMenu.close();
-                                Quickshell.execDetached(["gio", "trash"].concat(root.selectedFilePaths));
+                                const cleanPaths = root.selectedFilePaths.map(p => root._cleanPath(p));
+                                Quickshell.execDetached(["gio", "trash"].concat(cleanPaths));
                                 root.clearSelection();
                             }
                         }
@@ -1792,13 +1791,7 @@ DesktopPluginComponent {
         title: I18n.tr("Select Folder")
         currentFolder: root.targetFolderUrl
         onAccepted: {
-            let path = String(selectedFolder);
-            if (path.startsWith("file://")) {
-                path = path.substring(7);
-            }
-            if (path.startsWith("localhost/")) {
-                path = path.substring(9);
-            }
+            let path = root._cleanPath(selectedFolder);
             if (pluginService) {
                 pluginService.savePluginData(pluginId, "customFolderPath", path);
                 pluginService.savePluginData(pluginId, "folderType", "custom");
