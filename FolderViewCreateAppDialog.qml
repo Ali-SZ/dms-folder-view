@@ -201,6 +201,8 @@ Popup {
                                             font.pixelSize: Theme.fontSizeTiny
                                             color: Theme.surfaceVariantText
                                             elide: Text.ElideRight
+                                            maximumLineCount: 2
+                                            wrapMode: Text.WrapAnywhere
                                             width: parent.width
                                         }
                                     }
