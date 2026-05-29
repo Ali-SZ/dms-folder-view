@@ -847,10 +847,10 @@ DesktopPluginComponent {
                         required property bool fileIsDir
                         required property int index
 
-                        property bool isDesktop: model.isDesktop !== undefined ? model.isDesktop : false
-                        property string appName: model.appName !== undefined ? model.appName : ""
-                        property string appIcon: model.appIcon !== undefined ? model.appIcon : ""
-                        property string appExec: model.appExec !== undefined ? model.appExec : ""
+                        required property bool isDesktop
+                        required property string appName
+                        required property string appIcon
+                        required property string appExec
 
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
@@ -1020,10 +1020,10 @@ DesktopPluginComponent {
                         required property bool fileIsDir
                         required property int index
 
-                        property bool isDesktop: model.isDesktop !== undefined ? model.isDesktop : false
-                        property string appName: model.appName !== undefined ? model.appName : ""
-                        property string appIcon: model.appIcon !== undefined ? model.appIcon : ""
-                        property string appExec: model.appExec !== undefined ? model.appExec : ""
+                        required property bool isDesktop
+                        required property string appName
+                        required property string appIcon
+                        required property string appExec
 
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
@@ -1195,10 +1195,10 @@ DesktopPluginComponent {
                         required property bool fileIsDir
                         required property int index
 
-                        property bool isDesktop: model.isDesktop !== undefined ? model.isDesktop : false
-                        property string appName: model.appName !== undefined ? model.appName : ""
-                        property string appIcon: model.appIcon !== undefined ? model.appIcon : ""
-                        property string appExec: model.appExec !== undefined ? model.appExec : ""
+                        required property bool isDesktop
+                        required property string appName
+                        required property string appIcon
+                        required property string appExec
 
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
