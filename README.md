@@ -6,20 +6,14 @@ A folder viewer widget that displays and manages files and directories on your s
 
 ## Install
 
-**Required:** This plugin requires [dms-common](https://github.com/hthienloc/dms-common) to be installed.
-
+Use the DMS CLI:
 ```bash
-# 1. Install shared components
-git clone https://github.com/hthienloc/dms-common ~/.config/DankMaterialShell/plugins/dms-common
-
-# 2. Install this plugin
-dms plugins install folderView
+dms plugins install folder-view
 ```
 
 Or manually:
-
 ```bash
-git clone https://github.com/hthienloc/dms-folder-view ~/.config/DankMaterialShell/plugins/folderView
+git clone https://github.com/hthienloc/dms-folder-view ~/.config/DankMaterialShell/plugins/folder-view
 ```
 
 ## Features

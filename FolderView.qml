@@ -8,6 +8,7 @@ import qs.Widgets
 import qs.Services
 import qs.Modules.Plugins
 import QtQuick.Dialogs
+import "./dms-common"
 
 DesktopPluginComponent {
     id: root

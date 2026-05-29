@@ -4,18 +4,14 @@ import qs.Common
 import qs.Services
 import qs.Widgets
 import qs.Modules.Plugins
-import "../dms-common"
+import "./dms-common"
 
 PluginSettings {
     id: root
     pluginId: "folderView"
 
-    PluginHeader {
-        title: I18n.tr("Folder View Settings")
-    }
-
     SettingsCard {
-        SectionTitle { text: I18n.tr("Appearance") }
+        SectionTitle { text: I18n.tr("Appearance"); icon: "palette" }
 
         SliderSetting {
             settingKey: "backgroundOpacity"
@@ -61,5 +57,9 @@ PluginSettings {
             description: I18n.tr("Show files starting with a dot (e.g. .hidden).")
             defaultValue: false
         }
+    }
+
+    PluginAbout {
+        repoUrl: "https://github.com/hthienloc/dms-folder-view"
     }
 }
