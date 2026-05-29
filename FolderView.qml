@@ -197,6 +197,12 @@ DesktopPluginComponent {
         return path;
     }
 
+    function launchDesktopFile(path) {
+        let cleanPath = root._cleanPath(path);
+        let shellCmd = 'cmd=$(grep -m 1 "^Exec=" "' + cleanPath + '" | cut -d= -f2- | sed "s/%[fFuUiIcDkKvV]//g"); exec sh -c "$cmd"';
+        Quickshell.execDetached(["sh", "-c", shellCmd]);
+    }
+
     function smartTruncate(name, full, availableWidth, fontSize) {
         if (full || !name || name.length <= 10) return name;
         
@@ -958,9 +964,8 @@ DesktopPluginComponent {
                                         launchPulse.restart();
                                         launchTimer.restart();
                                         // Open file/folder using default system application
-                                        if (delegateRoot.isDesktop && delegateRoot.appExec) {
-                                            let cmd = delegateRoot.appExec.replace(/%[fFuUiIcDkKvV]/g, "").trim();
-                                            Quickshell.execDetached(["sh", "-c", cmd]);
+                                        if (delegateRoot.isDesktop) {
+                                            root.launchDesktopFile(delegateRoot.filePath);
                                         } else {
                                             Quickshell.execDetached(["gio", "open", root._cleanPath(delegateRoot.filePath)]);
                                         }
@@ -1132,9 +1137,8 @@ DesktopPluginComponent {
                                         listDelegateRoot.isLaunching = true;
                                         listLaunchPulse.restart();
                                         // Open file/folder using default system application
-                                        if (listDelegateRoot.isDesktop && listDelegateRoot.appExec) {
-                                            let cmd = listDelegateRoot.appExec.replace(/%[fFuUiIcDkKvV]/g, "").trim();
-                                            Quickshell.execDetached(["sh", "-c", cmd]);
+                                        if (listDelegateRoot.isDesktop) {
+                                            root.launchDesktopFile(listDelegateRoot.filePath);
                                         } else {
                                             Quickshell.execDetached(["gio", "open", root._cleanPath(listDelegateRoot.filePath)]);
                                         }
@@ -1308,9 +1312,8 @@ DesktopPluginComponent {
                                         compactDelegateRoot.isLaunching = true;
                                         compactLaunchPulse.restart();
                                         // Open file/folder using default system application
-                                        if (compactDelegateRoot.isDesktop && compactDelegateRoot.appExec) {
-                                            let cmd = compactDelegateRoot.appExec.replace(/%[fFuUiIcDkKvV]/g, "").trim();
-                                            Quickshell.execDetached(["sh", "-c", cmd]);
+                                        if (compactDelegateRoot.isDesktop) {
+                                            root.launchDesktopFile(compactDelegateRoot.filePath);
                                         } else {
                                             Quickshell.execDetached(["gio", "open", root._cleanPath(compactDelegateRoot.filePath)]);
                                         }
@@ -1404,7 +1407,12 @@ DesktopPluginComponent {
                             action: function() {
                                 quickMenu.close();
                                 for (let path of root.selectedFilePaths) {
-                                  Quickshell.execDetached(["gio", "open", root._cleanPath(path)]);
+                                    let clean = root._cleanPath(path);
+                                    if (clean.endsWith(".desktop")) {
+                                        root.launchDesktopFile(path);
+                                    } else {
+                                        Quickshell.execDetached(["gio", "open", clean]);
+                                    }
                                 }
                                 root.clearSelection();
                             }
