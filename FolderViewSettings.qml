@@ -25,7 +25,7 @@ PluginSettings {
         SliderSetting {
             settingKey: "borderOpacity"
             label: I18n.tr("Border Opacity")
-            defaultValue: 8
+            defaultValue: 0
             minimum: 0
             maximum: 100
             unit: "%"

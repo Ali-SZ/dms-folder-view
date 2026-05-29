@@ -26,7 +26,7 @@ DesktopPluginComponent {
 
     // Settings config
     readonly property real backgroundOpacity: (pluginData.backgroundOpacity ?? 80) / 100
-    readonly property real borderOpacity: (pluginData.borderOpacity ?? 8) / 100
+    readonly property real borderOpacity: (pluginData.borderOpacity ?? 0) / 100
     readonly property bool showHidden: pluginData.showHidden ?? false
     readonly property int cellSize: pluginData.cellSize ?? 84
     readonly property double sizeScale: cellSize / 84.0
