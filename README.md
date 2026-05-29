@@ -8,12 +8,12 @@ A folder viewer widget that displays and manages files and directories on your s
 
 Use the DMS CLI:
 ```bash
-dms plugins install folder-view
+dms plugins install folderView
 ```
 
 Or manually:
 ```bash
-git clone https://github.com/hthienloc/dms-folder-view ~/.config/DankMaterialShell/plugins/folder-view
+git clone https://github.com/hthienloc/dms-folder-view ~/.config/DankMaterialShell/plugins/folderView
 ```
 
 ## Features
