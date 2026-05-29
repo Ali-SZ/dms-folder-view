@@ -301,41 +301,48 @@ DesktopPluginComponent {
                 if (pattern === "" || nameStr.toLowerCase().indexOf(pattern) !== -1) {
                     let pathStr = String(fPath);
                     let isDesktop = nameStr.endsWith(".desktop") && !fIsDir;
-                    let appName = "";
-                    let appIcon = "";
-                    let appExec = "";
-
-                    if (isDesktop) {
-                        try {
-                            var xhr = new XMLHttpRequest();
-                            let fileUrl = pathStr.startsWith("file://") ? pathStr : "file://" + pathStr;
-                            xhr.open("GET", fileUrl, false);
-                            xhr.send(null);
-                            if (xhr.status === 200 || xhr.status === 0) {
-                                var lines = xhr.responseText.split('\n');
-                                for (var j = 0; j < lines.length; j++) {
-                                    var line = lines[j].trim();
-                                    if (line.startsWith("Name=") && !appName) {
-                                        appName = line.substring(5).trim();
-                                    } else if (line.startsWith("Icon=") && !appIcon) {
-                                        appIcon = line.substring(5).trim();
-                                    } else if (line.startsWith("Exec=") && !appExec) {
-                                        appExec = line.substring(5).trim();
-                                    }
-                                }
-                            }
-                        } catch(e) {}
-                    }
-
                     let item = {
                         filePath: pathStr,
                         fileName: nameStr,
                         fileIsDir: !!fIsDir,
                         isDesktop: isDesktop,
-                        appName: appName,
-                        appIcon: appIcon,
-                        appExec: appExec
+                        appName: "",
+                        appIcon: "",
+                        appExec: ""
                     };
+                    
+                    if (isDesktop) {
+                        let safePath = root._cleanPath(pathStr);
+                        Proc.runCommand("parseDesktop-" + Math.random(), ["cat", safePath], (out, code) => {
+                            if (code === 0 && out) {
+                                let aName = "";
+                                let aIcon = "";
+                                let aExec = "";
+                                let lines = out.split('\n');
+                                for (let j = 0; j < lines.length; j++) {
+                                    let l = lines[j].trim();
+                                    if (l.startsWith("Name=") && !aName) aName = l.substring(5).trim();
+                                    else if (l.startsWith("Icon=") && !aIcon) aIcon = l.substring(5).trim();
+                                    else if (l.startsWith("Exec=") && !aExec) aExec = l.substring(5).trim();
+                                }
+                                
+                                // Find the item index since model might have changed
+                                let targetIdx = -1;
+                                for (let k = 0; k < filteredModel.count; k++) {
+                                    if (filteredModel.get(k).filePath === pathStr) {
+                                        targetIdx = k;
+                                        break;
+                                    }
+                                }
+                                
+                                if (targetIdx !== -1) {
+                                    filteredModel.setProperty(targetIdx, "appName", aName);
+                                    filteredModel.setProperty(targetIdx, "appIcon", aIcon);
+                                    filteredModel.setProperty(targetIdx, "appExec", aExec);
+                                }
+                            }
+                        });
+                    }
                     
                     let isPinned = root.pinnedPaths.indexOf(pathStr) !== -1;
                     if (isPinned) {
