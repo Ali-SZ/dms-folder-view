@@ -23,18 +23,28 @@ Popup {
     property string targetFolderUrl: ""
     property var allApps: []
 
-    Process {
-        id: appScanner
-        command: ["python3", Qt.resolvedUrl("scripts/scan_apps.py").toString().replace("file://", "")]
-        onExited: {
-            try {
-                const data = JSON.parse(stdout.readAll());
-                createAppDialog.allApps = data;
-                updateAppModel();
-            } catch(e) {
-                console.log("Error parsing apps: " + e);
-            }
+    function fetchApps() {
+        if (createAppDialog.allApps.length > 0) {
+            updateAppModel();
+            return;
         }
+        
+        let scriptPath = Qt.resolvedUrl("scripts/scan_apps.py").toString().replace("file://", "");
+        if (scriptPath.startsWith("localhost/")) {
+            scriptPath = scriptPath.substring(10);
+        }
+        
+        Proc.runCommand("dmsFolderView.scanApps", ["python3", scriptPath], (out, code) => {
+            if (code === 0 && out) {
+                try {
+                    const data = JSON.parse(out);
+                    createAppDialog.allApps = data;
+                    updateAppModel();
+                } catch(e) {
+                    console.log("Error parsing apps: " + e);
+                }
+            }
+        });
     }
 
     onOpened: {
@@ -44,7 +54,7 @@ Popup {
             execField.text = "";
             iconField.text = "";
             if (createAppDialog.allApps.length === 0) {
-                appScanner.running = true;
+                fetchApps();
             } else {
                 updateAppModel();
             }
